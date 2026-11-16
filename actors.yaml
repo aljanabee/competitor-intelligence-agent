@@ -1,0 +1,142 @@
+# Apify actor configuration.
+#
+# Every scraping source is a swappable Apify actor. Change `actor` to use a
+# different one from the Apify Store and adjust `input` to that actor's input
+# schema. Placeholders:
+#   "{{url}}"      the profile / page URL being scraped
+#   "{{domain}}"   company domain, e.g. example.dk
+#   "{{limit}}"    item limit from the request options
+#   "{{query}}"    search term (discovery)
+#   "{{lat}}" "{{lng}}" "{{radius_km}}"   discovery centre + radius
+# A value that is exactly a placeholder keeps its type (number, list ...).
+#
+# `fields` maps the normalised field names the agent uses to candidate keys in
+# the actor's output (first non-empty wins; dotted paths allowed).
+#
+# NOTE: actors marked "community" are third-party. Check pricing, input schema
+# and maintenance status in the Apify Console before production use.
+
+google_maps:            # competitor discovery within a radius (official-ish, widely used)
+  actor: compass/crawler-google-places
+  input:
+    searchStringsArray: ["{{query}}"]
+    customGeolocation:
+      type: Point
+      coordinates: ["{{lng}}", "{{lat}}"]
+      radiusKm: "{{radius_km}}"
+    maxCrawledPlacesPerSearch: "{{limit}}"
+    language: da
+    skipClosedPlaces: true
+  fields:
+    name: [title, name]
+    website: [website, url]
+    lat: [location.lat, lat]
+    lng: [location.lng, lng]
+    address: [address, street]
+    postcode: [postalCode]
+    category: [categoryName]
+    rating: [totalScore]
+    reviews_count: [reviewsCount]
+
+website:                # Apify official - fast HTML crawler
+  actor: apify/website-content-crawler
+  memory_mb: 1024
+  input:
+    startUrls: [{url: "{{url}}"}]
+    maxCrawlPages: "{{limit}}"
+    maxCrawlDepth: 2
+    crawlerType: cheerio
+    saveMarkdown: true
+    removeCookieWarnings: true
+  fields:
+    url: [url, loadedUrl]
+    title: [metadata.title, title]
+    description: [metadata.description]
+    text: [markdown, text]
+
+website_fallback:       # same actor with a real browser, used when the fast crawler gets no pages (JS sites)
+  actor: apify/website-content-crawler
+  memory_mb: 4096
+  input:
+    startUrls: [{url: "{{url}}"}]
+    maxCrawlPages: "{{limit}}"
+    maxCrawlDepth: 2
+    crawlerType: "playwright:adaptive"
+    saveMarkdown: true
+    removeCookieWarnings: true
+  fields:
+    url: [url, loadedUrl]
+    title: [metadata.title, title]
+    description: [metadata.description]
+    text: [markdown, text]
+
+trustpilot:             # community - haketa/trustpilot-reviews-scraper (documented schema, Nov 2026)
+  actor: haketa/trustpilot-reviews-scraper
+  memory_mb: 1024
+  input:
+    businesses: ["{{domain}}"]
+    maxReviewsPerBusiness: "{{limit}}"
+    country: US                       # proxy country - the actor only allows US; Danish reviews are still returned
+    proxyConfiguration:
+      useApifyProxy: true
+      apifyProxyGroups: [RESIDENTIAL]
+  fields:
+    rating: [rating, stars, reviewRating, score]
+    title: [title, reviewTitle]
+    text: [text, reviewText, content, body]
+    date: [publishedDate, date, dates.publishedDate, createdAt]
+    reply: [companyReply, reply, replyText, reply.message]
+    trust_score: [trustScore, companyTrustScore, company.trustScore]
+    total_reviews: [totalReviews, numberOfReviews, company.numberOfReviews]
+    _keys: [__keys__]
+
+linkedin:               # community - swap freely
+  actor: harvestapi/linkedin-company-posts
+  input:
+    targetUrls: ["{{url}}"]
+    maxPosts: "{{limit}}"
+  fields:
+    text: [content, text, commentary]
+    date: [postedAt.date, postedAt, date]
+    likes: [engagement.likes, numLikes, likes]
+    comments: [engagement.comments, numComments, comments]
+    shares: [engagement.shares, numShares, shares]
+    url: [linkedinUrl, url, postUrl]
+
+facebook:               # Apify official
+  actor: apify/facebook-posts-scraper
+  input:
+    startUrls: [{url: "{{url}}"}]
+    resultsLimit: "{{limit}}"
+  fields:
+    text: [text, message]
+    date: [time, timestamp, date]
+    likes: [likes, reactionsCount]
+    comments: [comments, commentsCount]
+    shares: [shares, sharesCount]
+    url: [url, postUrl]
+
+facebook_comments:      # Apify official - what people *say about* the company
+  actor: apify/facebook-comments-scraper
+  input:
+    startUrls: "{{urls}}"
+    resultsLimit: "{{limit}}"
+  fields:
+    text: [text, message]
+    date: [date, timestamp]
+    likes: [likesCount, likes]
+
+instagram:              # Apify official
+  actor: apify/instagram-scraper
+  input:
+    directUrls: ["{{url}}"]
+    resultsType: posts
+    resultsLimit: "{{limit}}"
+    addParentData: false
+  fields:
+    text: [caption, text]
+    date: [timestamp, date]
+    likes: [likesCount, likes]
+    comments: [commentsCount, comments]
+    url: [url]
+    latest_comments: [latestComments]

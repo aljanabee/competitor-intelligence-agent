@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Konkurrentanalyse</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #14171f; --muted: #5d6576; --line: #e3e6ec;
+    --accent: #1f4fd1; --accent-soft: #e8eefc; --good: #137a4a; --good-soft: #e3f4ec;
+    --warn: #a35a00; --warn-soft: #fdf1e1; --bad: #b42318; --bad-soft: #fde8e6;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.55 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  header { background: #0f1b3d; color: #fff; padding: 22px 32px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: .2px; }
+  header .sub { color: #b7c3e6; font-size: 13px; }
+  header .status { font-size: 12px; color: #b7c3e6; text-align: right; }
+  header .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin: 0 4px 0 12px; vertical-align: middle; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 24px 64px; }
+  .grid { display: grid; gap: 16px; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 860px) { .cols-2, .cols-3 { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; }
+  h2 { font-size: 17px; margin: 0 0 12px; font-weight: 650; }
+  h3 { font-size: 14px; margin: 0 0 8px; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 0 0 6px; color: var(--muted); }
+  input[type=text], input[type=password], input[type=number], textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; }
+  textarea { min-height: 84px; resize: vertical; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .checks label { display: inline-flex; gap: 6px; align-items: center; font-weight: 500; color: var(--ink); margin-right: 16px; }
+  button { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 9px 14px; cursor: pointer; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; padding: 11px 22px; }
+  button.primary:disabled { opacity: .55; cursor: default; }
+  button.link { border: none; background: none; color: var(--accent); padding: 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .hidden { display: none !important; }
+  .error { color: var(--bad); font-size: 13px; margin-top: 8px; }
+  .jobs { max-height: 260px; overflow: auto; }
+  .jobs button { display: flex; width: 100%; justify-content: space-between; margin-bottom: 6px; text-align: left; }
+  .pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .pill.good { background: var(--good-soft); color: var(--good); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .pill.grey { background: #eef0f4; color: var(--muted); }
+  /* progress */
+  .steps { list-style: none; padding: 0; margin: 12px 0 0; font-size: 13px; }
+  .steps li { padding: 3px 0; color: var(--muted); }
+  .steps li:last-child { color: var(--ink); font-weight: 600; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+  .bar > div { height: 100%; width: 30%; background: var(--accent); animation: slide 1.4s ease-in-out infinite; }
+  @keyframes slide { 0% { margin-left: -30%; } 100% { margin-left: 100%; } }
+  /* report */
+  .hero { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: start; }
+  .hero .title { font-size: 26px; font-weight: 700; margin: 0 0 4px; }
+  .position { text-align: center; padding: 14px 18px; border-radius: var(--radius); background: var(--accent-soft); min-width: 170px; }
+  .position .lbl { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .position .val { font-size: 19px; font-weight: 700; color: var(--accent); }
+  .summary { font-size: 16px; line-height: 1.65; margin: 14px 0 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 650; text-transform: uppercase; letter-spacing: .4px; }
+  td.num { font-variant-numeric: tabular-nums; }
+  tr.target td { background: #f8faff; }
+  .lead { font-weight: 700; color: var(--good); }
+  .company h2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 8px 0 14px; }
+  .kpi { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+  .kpi .v { font-size: 20px; font-weight: 700; }
+  .kpi .l { font-size: 12px; color: var(--muted); }
+  .trend-down { color: var(--bad); font-size: 13px; font-weight: 600; }
+  .trend-up { color: var(--good); font-size: 13px; font-weight: 600; }
+  .dist { display: grid; grid-template-columns: 22px 1fr 34px; gap: 6px; align-items: center; font-size: 12px; margin: 2px 0; }
+  .dist .b { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .dist .b > div { height: 100%; background: var(--accent); }
+  ul.clean { margin: 6px 0 0; padding-left: 18px; }
+  ul.clean li { margin: 3px 0; }
+  .quote { color: var(--muted); font-style: italic; font-size: 13px; }
+  .swot .card h2 { font-size: 15px; }
+  .swot .s { border-top: 4px solid var(--good); }
+  .swot .w { border-top: 4px solid var(--bad); }
+  .swot .o { border-top: 4px solid var(--accent); }
+  .swot .t { border-top: 4px solid var(--warn); }
+  ol.recs { padding-left: 0; list-style: none; counter-reset: r; margin: 0; }
+  ol.recs > li { counter-increment: r; position: relative; padding: 12px 0 12px 46px; border-bottom: 1px solid var(--line); }
+  ol.recs > li:last-child { border-bottom: none; }
+  ol.recs > li::before { content: counter(r); position: absolute; left: 0; top: 12px; width: 30px; height: 30px; border-radius: 50%;
+                         background: var(--accent); color: #fff; font-weight: 700; display: grid; place-items: center; }
+  .recs .a { font-weight: 650; }
+  details summary { cursor: pointer; color: var(--accent); font-size: 13px; margin-top: 4px; }
+  .section-title { font-size: 20px; font-weight: 700; margin: 30px 0 12px; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 16px; }
+  @media print {
+    header .status, #setup, #progress, .toolbar button, details summary { display: none !important; }
+    body { background: #fff; }
+    .card { break-inside: avoid; border-color: #ccc; }
+    main { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Konkurrentanalyse</h1>
+    <div class="sub">Sammenlign en virksomhed med konkurrenterne: hjemmeside, anmeldelser, sociale medier og regnskab</div>
+  </div>
+  <div class="status" id="health">Forbinder…</div>
+</header>
+
+<main>
+  <!-- ======================= SETUP ======================= -->
+  <section id="setup" class="grid cols-2">
+    <div class="card">
+      <h2>Ny analyse</h2>
+      <div class="grid" style="gap:14px">
+        <div>
+          <label for="target">Virksomhed (domæne eller CVR-nummer)</label>
+          <input id="target" type="text" placeholder="fx proshop.dk">
+        </div>
+        <div>
+          <label for="competitors">Konkurrenter (ét domæne pr. linje)</label>
+          <textarea id="competitors" placeholder="computersalg.dk&#10;komplett.dk"></textarea>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="auto"> Find også konkurrenter automatisk</label>
+        </div>
+        <div id="autoOpts" class="row hidden">
+          <div style="flex:1"><label for="keywords">Branche / søgeord</label><input id="keywords" type="text" placeholder="fx tandlæge"></div>
+          <div style="width:120px"><label for="radius">Radius (km)</label><input id="radius" type="number" value="25" min="1"></div>
+        </div>
+        <div>
+          <label>Hvad skal analyseres?</label>
+          <div class="checks">
+            <label><input type="checkbox" id="c_website" checked> Hjemmeside</label>
+            <label><input type="checkbox" id="c_trustpilot" checked> Trustpilot</label>
+            <label><input type="checkbox" id="c_social" checked> Sociale medier</label>
+            <label><input type="checkbox" id="c_financials" checked> Regnskab (CVR)</label>
+          </div>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="small" checked> Hurtig demo (færre anmeldelser og opslag)</label>
+        </div>
+        <div class="row">
+          <button class="primary" id="start">Start analyse</button>
+          <span class="muted small">En analyse tager typisk 5–15 minutter.</span>
+        </div>
+        <div class="error" id="formError"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tidligere analyser</h2>
+      <p class="muted small" style="margin-top:-6px">Åbn en færdig analyse med det samme.</p>
+      <div class="jobs" id="jobs"><span class="muted small">Indlæser…</span></div>
+      <div id="keyBox" class="hidden" style="margin-top:16px">
+        <label for="apikey">API-nøgle</label>
+        <div class="row"><input id="apikey" type="password" style="flex:1"><button id="saveKey">Gem</button></div>
+        <div class="muted small" style="margin-top:4px">Gemmes kun i denne browser.</div>
+      </div>
+      <button class="link small" id="changeKey" style="margin-top:12px">Skift API-nøgle</button>
+    </div>
+  </section>
+
+  <!-- ======================= PROGRESS ======================= -->
+  <section id="progress" class="card hidden" style="margin-top:16px">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">Analysen kører <span class="muted small" id="elapsed"></span></h2>
+      <span class="pill" id="pstatus">I kø</span>
+    </div>
+    <div class="bar"><div></div></div>
+    <ul class="steps" id="steps"></ul>
+  </section>
+
+  <!-- ======================= REPORT ======================= -->
+  <section id="report" class="hidden" style="margin-top:24px"></section>
+</main>
+
+<script>
+(() => {
+  const API = location.origin;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const list = (v) => Array.isArray(v) ? v : (v ? [v] : []);
+  const pct = (v) => v == null ? "–" : Math.round(v * 100) + " %";
+  const num = (v, d = 1) => v == null ? "–" : Number(v).toLocaleString("da-DK", { maximumFractionDigits: d });
+  const unquote = (t) => String(t ?? "").trim().replace(/^["'“”«»„]+|["'“”«»„]+$/g, "");
+  const money = (v) => v == null ? "–" : (Math.abs(v) >= 1e6 ? num(v / 1e6, 1) + " mio. kr." : num(v, 0) + " kr.");
+
+  // ---------- API key: from #key=... (open-demo.ps1) or local storage ----------
+  let KEY = "";
+  try {
+    const m = location.hash.match(/key=([^&]+)/);
+    if (m) { KEY = decodeURIComponent(m[1]); localStorage.setItem("ci_key", KEY); history.replaceState(null, "", location.pathname); }
+    else { KEY = localStorage.getItem("ci_key") || ""; }
+  } catch (e) { /* storage unavailable */ }
+  const showKeyBox = (show) => $("keyBox").classList.toggle("hidden", !show);
+  if (!KEY) showKeyBox(true);
+  $("changeKey").onclick = () => showKeyBox($("keyBox").classList.contains("hidden"));
+  $("saveKey").onclick = () => {
+    KEY = $("apikey").value.trim();
+    try { localStorage.setItem("ci_key", KEY); } catch (e) {}
+    showKeyBox(false); loadJobs();
+  };
+
+  async function api(path, opts = {}) {
+    const r = await fetch(API + path, { ...opts, headers: { "Content-Type": "application/json", "X-API-Key": KEY, ...(opts.headers || {}) } });
+    if (r.status === 401) { showKeyBox(true); throw new Error("Ugyldig eller manglende API-nøgle"); }
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body.detail ? JSON.stringify(body.detail) : "HTTP " + r.status);
+    return body;
+  }
+
+  // ---------- health ----------
+  fetch(API + "/health").then(r => r.json()).then(h => {
+    const src = h.sources || {};
+    const dot = (ok) => `<span class="dot" style="background:${ok ? "#3ccf8e" : "#f0a33a"}"></span>`;
+    $("health").innerHTML = `${dot(src.apify)}Web & anmeldelser ${dot(src.llm)}AI-analyse ${dot(src.cvr)}CVR`
+      + (h.mock_mode ? `<br><span class="pill warn" style="margin-top:6px">Demo-data (mock)</span>` : "");
+    if (!src.cvr) { $("c_financials").checked = false; $("c_financials").parentElement.title = "CVR-adgang er ikke sat op endnu"; }
+  }).catch(() => { $("health").textContent = "Kan ikke nå API'et"; });
+
+  // ---------- previous jobs ----------
+  const statusPill = (s) => ({ completed: '<span class="pill good">Færdig</span>', running: '<span class="pill">Kører</span>',
+    queued: '<span class="pill grey">I kø</span>', failed: '<span class="pill bad">Fejlet</span>' }[s] || s);
+  async function loadJobs() {
+    if (!KEY) { $("jobs").innerHTML = '<span class="muted small">Indtast API-nøglen for at se analyser.</span>'; return; }
+    try {
+      const jobs = await api("/v1/analyses?limit=30");
+      if (!jobs.length) { $("jobs").innerHTML = '<span class="muted small">Ingen analyser endnu.</span>'; return; }
+      $("jobs").innerHTML = jobs.map(j => `<button data-id="${esc(j.id)}">
+          <span><b>${esc(j.target || "–")}</b><br><span class="muted small">${new Date(j.created_at).toLocaleString("da-DK")}</span></span>
+          <span>${statusPill(j.status)}</span></button>`).join("");
+      $("jobs").querySelectorAll("button").forEach(b => b.onclick = () => follow(b.dataset.id));
+    } catch (e) { $("jobs").innerHTML = `<span class="error">${esc(e.message)}</span>`; }
+  }
+  loadJobs();
+
+  // ---------- start ----------
+  $("auto").onchange = () => $("autoOpts").classList.toggle("hidden", !$("auto").checked);
+  $("start").onclick = async () => {
+    $("formError").textContent = "";
+    const t = $("target").value.trim();
+    const comps = $("competitors").value.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+    const auto = $("auto").checked;
+    if (!t) { $("formError").textContent = "Angiv virksomhedens domæne eller CVR-nummer."; return; }
+    if (!auto && !comps.length) { $("formError").textContent = "Angiv mindst én konkurrent, eller vælg automatisk søgning."; return; }
+    const target = /^\d{8}$/.test(t) ? { cvr: t } : { domain: t };
+    const competitors = { mode: auto ? (comps.length ? "both" : "auto") : "manual", max_competitors: Math.max(comps.length, 3) };
+    if (comps.length) competitors.manual = comps.map(d => (/^\d{8}$/.test(d) ? { cvr: d } : { domain: d }));
+    if (auto) {
+      competitors.radius_km = Number($("radius").value) || 25;
+      const kw = $("keywords").value.split(",").map(s => s.trim()).filter(Boolean);
+      if (kw.length) competitors.industry_keywords = kw;
+    }
+    const body = {
+      target, competitors,
+      components: { website: $("c_website").checked, trustpilot: $("c_trustpilot").checked,
+                    social: $("c_social").checked, financials: $("c_financials").checked },
+    };
+    if ($("small").checked) body.options = { max_reviews: 30, max_social_posts: 10, max_website_pages: 5 };
+    $("start").disabled = true;
+    try {
+      const job = await api("/v1/analyses", { method: "POST", body: JSON.stringify(body) });
+      follow(job.id);
+    } catch (e) { $("formError").textContent = e.message; }
+    finally { $("start").disabled = false; }
+  };
+
+  // ---------- follow a job ----------
+  let timer = null;
+  async function follow(id) {
+    clearInterval(timer);
+    $("report").classList.add("hidden");
+    const started = Date.now();
+    const tick = async () => {
+      let job;
+      try { job = await api("/v1/analyses/" + encodeURIComponent(id)); }
+      catch (e) { $("steps").innerHTML = `<li class="error">${esc(e.message)}</li>`; return; }
+      if (job.status === "completed" || job.status === "failed") {
+        clearInterval(timer);
+        $("progress").classList.add("hidden");
+        render(job); loadJobs();
+        return;
+      }
+      $("progress").classList.remove("hidden");
+      $("pstatus").textContent = job.status === "running" ? "Kører" : "I kø";
+      const secs = Math.round((Date.now() - Date.parse(job.created_at)) / 1000);
+      $("elapsed").textContent = `· ${Math.floor(secs / 60)} min ${secs % 60} s`;
+      $("steps").innerHTML = (job.progress || []).slice(-8).map(p => `<li>${esc(translate(p))}</li>`).join("") || "<li>Venter på at starte…</li>";
+    };
+    await tick();
+    timer = setInterval(tick, 5000);
+  }
+  const translate = (line) => line
+    .replace("Resolving target company", "Slår virksomheden op")
+    .replace(/Discovering competitors within ([\d.]+) km.*/, "Finder konkurrenter inden for $1 km")
+    .replace("Resolving", "Slår op:").replace("manually supplied competitors", "valgte konkurrenter")
+    .replace("Selected", "Valgt").replace("competitors:", "konkurrenter:")
+    .replace("Analysing", "Analyserer").replace("Building comparison matrix", "Sammenligner nøgletal")
+    .replace("Writing synthesis", "AI skriver analysen").replace("Done", "Færdig");
+
+  // ---------- report ----------
+  const POSITION = { market_leader: "Markedsleder", strong_challenger: "Stærk udfordrer", mid_pack: "Midterfeltet", lagging: "Bagud", unclear: "Uafklaret" };
+  const SATISFACTION = { very_high: ["Meget høj", "good"], high: ["Høj", "good"], mixed: ["Blandet", "warn"], low: ["Lav", "bad"],
+                         very_low: ["Meget lav", "bad"], insufficient_data: ["For lidt data", "grey"] };
+  const THREAT = { high: ["Høj trussel", "bad"], medium: ["Middel trussel", "warn"], low: ["Lav trussel", "good"] };
+  const FREQ = { dominant: "dominerende", recurring: "gentagende", occasional: "lejlighedsvis", isolated: "enkeltstående" };
+  const METRIC = {
+    revenue: ["Omsætning", money], gross_profit: ["Bruttofortjeneste", money], net_profit: ["Årets resultat", money],
+    net_margin: ["Nettomargin", pct], gross_profit_growth: ["Vækst i bruttofortjeneste", pct], revenue_growth: ["Omsætningsvækst", pct],
+    equity_ratio: ["Soliditetsgrad", pct], employees: ["Ansatte", v => num(v, 0)], gross_profit_per_employee: ["Bruttofortjeneste pr. ansat", money],
+    trustpilot_avg_rating: ["Trustpilot: gns. stjerner (udsnit)", v => num(v, 2)], trustpilot_trust_score: ["Trustpilot: TrustScore", v => num(v, 1)],
+    trustpilot_total_reviews: ["Trustpilot: antal anmeldelser", v => num(v, 0)], trustpilot_share_negative: ["Trustpilot: andel negative (1–2★)", pct],
+    trustpilot_reply_rate: ["Trustpilot: svarprocent", pct], trustpilot_sentiment: ["Anmeldelser: stemning (−1 til 1)", v => num(v, 2)],
+    social_total_posts: ["Sociale medier: opslag", v => num(v, 0)], social_avg_engagement: ["Sociale medier: gns. engagement", v => num(v, 1)],
+    social_sentiment: ["Sociale medier: stemning (−1 til 1)", v => num(v, 2)], website_pages: ["Hjemmeside: sider analyseret", v => num(v, 0)],
+  };
+  const STATUS = { ok: ["OK", "good"], not_found: ["Ikke fundet", "grey"], skipped: ["Sprunget over", "grey"], error: ["Fejl", "bad"] };
+  const compStatus = (r, label) => r ? `<span class="pill ${STATUS[r.status]?.[1] || "grey"}" title="${esc(r.error || "")}">${label}: ${STATUS[r.status]?.[0] || r.status}</span>` : "";
+
+  function render(job) {
+    const R = $("report"); R.classList.remove("hidden");
+    if (job.status === "failed") { R.innerHTML = `<div class="card"><h2>Analysen fejlede</h2><p class="error">${esc(job.error)}</p></div>`; return; }
+    const res = job.result, s = res.synthesis || {}, tgt = res.target.company;
+    const all = [res.target, ...res.competitors];
+    const nameOf = (a) => a.company.name || a.company.domain;
+    let h = "";
+
+    // toolbar
+    h += `<div class="toolbar"><span class="muted small">Analyse ${esc(job.id.slice(0, 8))} · ${new Date(job.updated_at).toLocaleString("da-DK")}</span>
+          <button onclick="window.print()">Gem som PDF</button></div>`;
+
+    // hero
+    h += `<div class="card hero"><div>
+            <div class="muted small">Konkurrentanalyse af</div>
+            <div class="title">${esc(nameOf(res.target))}</div>
+            <div class="muted small">sammenlignet med ${res.competitors.map(c => esc(nameOf(c))).join(", ") || "–"}</div>
+            ${s.executive_summary ? `<p class="summary">${esc(s.executive_summary)}</p>` : `<p class="muted">${esc(s.reason || s.error || "Ingen AI-opsummering.")}</p>`}
+          </div>
+          ${s.target_position ? `<div class="position"><div class="lbl">Position</div><div class="val">${esc(POSITION[s.target_position] || s.target_position)}</div></div>` : ""}
+        </div>`;
+
+    // recommendations
+    const recs = list(s.recommendations).slice().sort((a, b) => (a.priority || 9) - (b.priority || 9));
+    if (recs.length) {
+      h += `<div class="section-title">Anbefalinger</div><div class="card"><ol class="recs">` + recs.map(r => `<li>
+          <div class="a">${esc(r.action)}</div><div class="muted small">${esc(r.rationale || "")}</div>
+          ${r.evidence ? `<details><summary>Belæg</summary><div class="small">${esc(r.evidence)}</div></details>` : ""}</li>`).join("") + `</ol></div>`;
+    }
+
+    // SWOT
+    if (s.strengths || s.weaknesses || s.opportunities || s.threats) {
+      const box = (cls, title, items) => `<div class="card ${cls}"><h2>${title}</h2><ul class="clean">${list(items).map(i => `<li>${esc(i)}</li>`).join("") || '<li class="muted">–</li>'}</ul></div>`;
+      h += `<div class="section-title">SWOT</div><div class="grid cols-2 swot">
+            ${box("s", "Styrker", s.strengths)}${box("w", "Svagheder", s.weaknesses)}
+            ${box("o", "Muligheder", s.opportunities)}${box("t", "Trusler", s.threats)}</div>`;
+    }
+
+    // comparison table
+    const metrics = (res.comparison && res.comparison.metrics) || [];
+    if (metrics.length) {
+      h += `<div class="section-title">Nøgletal side om side</div><div class="card" style="overflow:auto"><table><thead><tr><th>Nøgletal</th>`
+        + all.map(a => `<th>${esc(nameOf(a))}${a.company.is_target ? " ★" : ""}</th>`).join("") + `</tr></thead><tbody>`;
+      for (const m of metrics) {
+        const [label, fmt] = METRIC[m.metric] || [m.metric, v => num(v, 2)];
+        h += `<tr><td>${esc(label)}</td>` + all.map(a => {
+          const v = m.values[a.company.name];
+          return `<td class="num ${m.leader === a.company.name ? "lead" : ""}">${v == null ? "–" : esc(fmt(v))}</td>`;
+        }).join("") + `</tr>`;
+      }
+      h += `</tbody></table><div class="muted small" style="margin-top:8px">Grøn = bedst i feltet. ★ = den analyserede virksomhed.</div></div>`;
+    }
+
+    // competitor profiles
+    const norm = (x) => String(x || "").toLowerCase().replace(/^www\./, "").replace(/\.(dk|com|se|no|de|eu)$/, "");
+    const compKeys = res.competitors.map(c => [norm(c.company.name), norm(c.company.domain)]);
+    const used = new Set();
+    let profiles = list(s.competitor_profiles).filter(p => {
+      const n = norm(p.name);
+      const i = compKeys.findIndex((ks, idx) => !used.has(idx) && ks.some(k => k && (n.includes(k) || k.includes(n))));
+      if (i < 0) return false;
+      used.add(i); return true;
+    });
+    if (!profiles.length) profiles = list(s.competitor_profiles).slice(0, res.competitors.length);
+    if (profiles.length) {
+      h += `<div class="section-title">Konkurrenterne</div><div class="grid cols-3">` + profiles.map(p => {
+        const [tl, tc] = THREAT[p.threat_level] || [p.threat_level || "", "grey"];
+        return `<div class="card"><h2 style="display:flex;justify-content:space-between;gap:8px">${esc(p.name)} <span class="pill ${tc}">${esc(tl)}</span></h2>
+          ${p.edge_over_target ? `<h3>Deres fordel</h3><p class="small" style="margin-top:0">${esc(p.edge_over_target)}</p>` : ""}
+          ${p.weakness_to_exploit ? `<h3>Svaghed at udnytte</h3><p class="small" style="margin:0">${esc(p.weakness_to_exploit)}</p>` : ""}</div>`;
+      }).join("") + `</div>`;
+    }
+
+    // per company detail
+    h += `<div class="section-title">Hvad siger kunderne – og hvordan positionerer de sig?</div><div class="grid">`;
+    for (const a of all) h += companyCard(a, nameOf(a));
+    h += `</div>`;
+
+    // data basis
+    const gaps = list(s.data_gaps), warns = list(res.warnings);
+    h += `<div class="section-title">Datagrundlag</div><div class="card small">
+        <table><thead><tr><th>Virksomhed</th><th>Kilder</th></tr></thead><tbody>` + all.map(a => `<tr><td>${esc(nameOf(a))}</td><td>
+          ${compStatus(a.website, "Hjemmeside")} ${compStatus(a.trustpilot, "Trustpilot")} ${compStatus(a.social, "Sociale medier")} ${compStatus(a.financials, "Regnskab")}</td></tr>`).join("")
+      + `</tbody></table>`
+      + (gaps.length ? `<h3 style="margin-top:14px">Huller i data</h3><ul class="clean">${gaps.map(g => `<li>${esc(g)}</li>`).join("")}</ul>` : "")
+      + (warns.length ? `<details><summary>Tekniske advarsler (${warns.length})</summary><ul class="clean">${warns.map(w => `<li>${esc(w)}</li>`).join("")}</ul></details>` : "")
+      + `</div>`;
+
+    R.innerHTML = h;
+    R.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function vocBlock(voc, source) {
+    if (!voc) return "";
+    const [sl, sc] = SATISFACTION[voc.customer_satisfaction] || [voc.customer_satisfaction || "", "grey"];
+    const complaints = list(voc.complaints).slice(0, 4), positives = list(voc.positive_feedback).slice(0, 3);
+    return `<div><h3>${source} <span class="pill ${sc}" style="text-transform:none;letter-spacing:0">Tilfredshed: ${esc(sl)}</span></h3>
+      <p class="small" style="margin-top:0">${esc(voc.overall_perception || "")}</p>
+      <div class="grid cols-2" style="gap:12px">
+        <div><b class="small" style="color:var(--bad)">Klager</b><ul class="clean small">${complaints.map(c => typeof c === "string" ? `<li>${esc(c)}</li>`
+          : `<li>${esc(c.theme)}${c.frequency ? ` <span class="muted">(${esc(FREQ[c.frequency] || c.frequency)})</span>` : ""}${c.example ? `<div class="quote">“${esc(unquote(c.example))}”</div>` : ""}</li>`).join("") || '<li class="muted">Ingen</li>'}</ul></div>
+        <div><b class="small" style="color:var(--good)">Ros</b><ul class="clean small">${positives.map(p => typeof p === "string" ? `<li>${esc(p)}</li>`
+          : `<li>${esc(p.theme)}${p.example ? `<div class="quote">“${esc(unquote(p.example))}”</div>` : ""}</li>`).join("") || '<li class="muted">Ingen</li>'}</ul></div>
+      </div></div>`;
+  }
+
+  function companyCard(a, name) {
+    const tp = a.trustpilot && a.trustpilot.status === "ok" ? a.trustpilot.data : null;
+    const web = a.website && a.website.status === "ok" ? a.website.data : null;
+    const soc = a.social && a.social.status === "ok" ? a.social.data : null;
+    const fin = a.financials && a.financials.status === "ok" ? a.financials.data.kpis : null;
+    let h = `<div class="card company"><h2>${esc(name)} ${a.company.is_target ? '<span class="pill">Analyseret virksomhed</span>' : '<span class="pill grey">Konkurrent</span>'}</h2>`;
+
+    const k = [];
+    if (tp) {
+      const st = tp.stats || {};
+      k.push([num(st.trust_score, 1), "TrustScore (Trustpilot)"]);
+      k.push([num(st.total_reviews_on_platform, 0), "anmeldelser i alt"]);
+      k.push([pct(st.reply_rate), "svarer på anmeldelser"]);
+    }
+    if (fin) { k.push([money(fin.revenue ?? fin.gross_profit), fin.revenue != null ? "omsætning" : "bruttofortjeneste"]); k.push([pct(fin.net_margin), "nettomargin"]); }
+    if (soc) k.push([num(soc.total_posts, 0), "opslag analyseret (sociale medier)"]);
+    if (k.length) h += `<div class="kpis">${k.slice(0, 6).map(([v, l]) => `<div class="kpi"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join("")}</div>`;
+
+    if (tp) {
+      const st = tp.stats || {};
+      if (st.avg_rating_last_90d != null && st.avg_rating_before != null) {
+        const d = st.avg_rating_last_90d - st.avg_rating_before;
+        if (Math.abs(d) >= 0.3) h += `<p class="${d < 0 ? "trend-down" : "trend-up"}">${d < 0 ? "▼" : "▲"} Gns. stjerner de seneste 90 dage: ${num(st.avg_rating_last_90d, 2)} mod ${num(st.avg_rating_before, 2)} før</p>`;
+      }
+      const dist = st.distribution || {}, tot = Object.values(dist).reduce((x, y) => x + y, 0) || 1;
+      h += `<div class="grid cols-2" style="gap:18px;margin-bottom:12px"><div>
+              <h3>Fordeling i udsnittet (${num(st.review_count_scraped, 0)} anmeldelser)</h3>
+              ${[5, 4, 3, 2, 1].map(n => `<div class="dist"><span>${n}★</span><div class="b"><div style="width:${Math.round((dist[n] || 0) / tot * 100)}%"></div></div><span class="muted">${dist[n] || 0}</span></div>`).join("")}
+            </div><div>${web && web.insights ? `<h3>Positionering</h3><p class="small" style="margin-top:0">${esc(web.insights.value_proposition || "")}</p>` : ""}</div></div>`;
+      h += vocBlock(tp.voice_of_customer, "Trustpilot");
+    } else if (web && web.insights) {
+      h += `<h3>Positionering</h3><p class="small" style="margin-top:0">${esc(web.insights.value_proposition || "")}</p>`;
+    }
+    if (soc && soc.analysis) h += `<div style="margin-top:14px">${vocBlock(soc.analysis.voice_of_customer, "Sociale medier")}</div>`;
+
+    if (web && web.insights) {
+      const ins = web.insights;
+      h += `<details style="margin-top:12px"><summary>Hjemmesidens budskaber og svagheder</summary><div class="grid cols-2 small" style="gap:12px;margin-top:8px">
+          <div><b>Differentiering</b><ul class="clean">${list(ins.differentiators).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+          <div><b>Svagheder</b><ul class="clean">${list(ins.weaknesses).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+        </div></details>`;
+    }
+    return h + `</div>`;
+  }
+
+  // expose for tests
+  window.__render = render;
+})();
+</script>
+</body>
+</html>

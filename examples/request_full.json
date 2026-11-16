@@ -1,0 +1,35 @@
+{
+  "target": {
+    "cvr": "12345678",
+    "domain": "mitfirma.dk",
+    "address": "Søndergade 10, 8000 Aarhus C"
+  },
+  "competitors": {
+    "mode": "both",
+    "manual": [
+      { "domain": "konkurrent-a.dk" },
+      { "name": "Konkurrent B ApS", "domain": "konkurrentb.dk",
+        "social_urls": { "linkedin": "https://www.linkedin.com/company/konkurrent-b" } }
+    ],
+    "radius_km": 20,
+    "max_competitors": 5,
+    "strategy": "combined",
+    "industry_keywords": ["tandlæge", "tandklinik"],
+    "exclude_domains": ["kæde-vi-ignorerer.dk"]
+  },
+  "components": {
+    "financials": true,
+    "social": true,
+    "website": true,
+    "trustpilot": true
+  },
+  "options": {
+    "social_platforms": ["linkedin", "facebook", "instagram"],
+    "max_social_posts": 30,
+    "max_reviews": 150,
+    "max_website_pages": 10,
+    "financial_years": 3,
+    "language": "da"
+  },
+  "webhook_url": "https://example.com/hooks/competitor-analysis"
+}

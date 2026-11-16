@@ -1,0 +1,25 @@
+# Python / tooling
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.python_packages/
+.vscode/
+
+# Local data and secrets
+data/
+*.db
+*.sqlite
+.env
+.env.*
+!.env.example
+local.settings.json
+
+# Build artifacts
+*.zip
+
+# Analysis output (contains scraped company data and customer reviews)
+report.json
+response_*.json
+result-*.json
